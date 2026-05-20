@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍀 로또 / 연금복권 번호 생성기</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0d0d;
+    --surface:   #1a1a1a;
+    --card:      #212121;
+    --border:    #2e2e2e;
+    --gold:      #c8a84b;
+    --gold2:     #e8c96d;
+    --sky:       #5cb8e0;
+    --sky2:      #7dd4f5;
+    --text:      #f0f0f0;
+    --dim:       #888888;
+    --red:       #e05c5c;
+    --blue:      #5c8ee0;
+    --green:     #5ce07a;
+    --yellow:    #e0c45c;
+    --purple:    #a05ce0;
+    --orange:    #e08a5c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 60px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 700px;
+  }
+
+  /* ── 헤더 ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 20px;
+  }
+  .header-title {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 32px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    transition: color 0.3s;
+  }
+  .header-title.pension-mode { color: var(--sky); }
+  .header-date {
+    font-size: 12px;
+    color: var(--dim);
+    padding-bottom: 4px;
+  }
+
+  /* ── 탭 ── */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .tab-btn {
+    padding: 9px 20px;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    color: var(--dim);
+  }
+  .tab-btn.active-lotto  { background: var(--gold);  color: #0d0d0d; }
+  .tab-btn.active-pension{ background: var(--sky);   color: #0d0d0d; }
+
+  .divider { height: 1px; background: var(--border); margin: 0 0 20px; }
+
+  /* ── 볼 그리드 (로또) ── */
+  .lotto-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .lotto-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .game-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    width: 52px;
+    flex-shrink: 0;
+  }
+  .ball {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 800;
+    flex-shrink: 0;
+    transition: transform 0.2s, opacity 0.3s;
+    background: #2a2a2a;
+    border: 1.5px solid #555;
+    color: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .ball.revealed {
+    border-color: #ccc;
+    color: #111;
+    animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .ball.revealed.r1  { background: #f5f5f5; }
+  .ball.revealed.r2  { background: #4dabf7; color: #fff; border-color: #4dabf7; }
+  .ball.revealed.r3  { background: #f03e3e; color: #fff; border-color: #f03e3e; }
+  .ball.revealed.r4  { background: #555; color: #fff; border-color: #555; }
+  .ball.revealed.r5  { background: #9775fa; color: #fff; border-color: #9775fa; }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+
+  /* ── 연금복권 ── */
+  .pension-section { display: none; }
+  .pension-section.visible { display: block; }
+  .lotto-section.hidden { display: none; }
+
+  .pension-label {
+    font-size: 12px;
+    color: var(--dim);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+  .pension-digits {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .pension-digit {
+    width: 64px;
+    height: 80px;
+    border-radius: 10px;
+    border: 1.5px solid #555;
+    background: #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.3s;
+  }
+  .pension-digit.revealed {
+    border-color: var(--sky);
+    background: #1e2e38;
+    animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .digit-pos {
+    font-size: 10px;
+    color: var(--dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .digit-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--sky2);
+  }
+  .pension-digit:not(.revealed) .digit-val { color: transparent; }
+
+  /* ── 프로그레스 ── */
+  .progress-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 2px;
+    background: var(--gold);
+    transition: width 0.3s ease, background 0.3s;
+  }
+  .progress-bar.pension-bar { background: var(--sky); }
+
+  .status {
+    font-size: 12px;
+    color: var(--dim);
+    margin-bottom: 16px;
+    min-height: 18px;
+    transition: color 0.3s;
+  }
+  .status.done { color: var(--green); }
+
+  /* ── 버튼 영역 ── */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--gold);
+    color: #0d0d0d;
+  }
+  .btn-primary:hover { background: var(--gold2); }
+  .btn-primary.pension-mode { background: var(--sky); }
+  .btn-primary.pension-mode:hover { background: var(--sky2); }
+  .btn-primary:disabled {
+    background: var(--border);
+    color: var(--dim);
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--card); }
+
+  /* ── 구분선 + 최근 결과 ── */
+  .recent-label {
+    font-size: 12px;
+    color: var(--dim);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .preview-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--dim);
+    min-height: 56px;
+    white-space: pre-line;
+    margin-bottom: 20px;
+  }
+
+  /* ── 기록 모달 ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 18px;
+    color: var(--gold);
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body {
+    overflow-y: auto;
+    padding: 16px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text);
+    flex: 1;
+  }
+  .modal-body .empty { color: var(--dim); }
+  .history-entry { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .history-entry:last-child { border-bottom: none; }
+  .history-mode { color: var(--gold); font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+  .history-mode.pension { color: var(--sky); }
+  .history-nums { color: var(--text); }
+
+  /* ── 모바일 반응형 ── */
+  @media (max-width: 480px) {
+    body { padding: 20px 12px 50px; }
+
+    .header-title { font-size: 24px; }
+
+    .tab-btn { font-size: 12px; padding: 8px 14px; }
+
+    /* 볼 크기 축소 */
+    .ball {
+      width: 40px;
+      height: 40px;
+      font-size: 13px;
+    }
+    .game-label { width: 42px; font-size: 10px; }
+    .lotto-row { gap: 5px; }
+
+    /* 연금복권 숫자 축소 */
+    .pension-digit { width: 48px; height: 64px; }
+    .digit-val { font-size: 22px; }
+
+    /* 버튼 풀너비 */
+    .btn-row { flex-direction: column; }
+    .btn { width: 100%; text-align: center; }
+
+    /* 모달 */
+    .modal { width: 96%; }
+    .modal-header { padding: 14px 16px; }
+    .modal-body { padding: 12px 16px; font-size: 11px; }
+  }
+
+  /* ── 복사 토스트 ── */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 22px;
+    border-radius: 99px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 200;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="header-title" id="headerTitle">🍀 LOTTO</div>
+    <div class="header-date" id="headerDate"></div>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active-lotto" id="tabLotto" onclick="switchMode('lotto')">🎱 로또 6/45</button>
+    <button class="tab-btn" id="tabPension" onclick="switchMode('pension')">💰 연금복권 720+</button>
+  </div>
+  <div class="divider"></div>
+
+  <!-- 로또 영역 -->
+  <div class="lotto-section" id="lottoSection">
+    <div class="lotto-grid" id="lottoGrid"></div>
+  </div>
+
+  <!-- 연금복권 영역 -->
+  <div class="pension-section" id="pensionSection">
+    <div class="pension-label">연금복권 720+ — 6자리 번호</div>
+    <div class="pension-digits" id="pensionDigits"></div>
+  </div>
+
+  <!-- 프로그레스 -->
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="status" id="statusText">버튼을 눌러 번호를 생성하세요</div>
+
+  <!-- 버튼 -->
+  <div class="btn-row">
+    <button class="btn btn-primary" id="genBtn" onclick="startGenerate()">번호 생성</button>
+    <button class="btn btn-secondary" onclick="copyResult()">결과 복사</button>
+    <button class="btn btn-secondary" onclick="openHistory()">기록 보기</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 최근 결과 -->
+  <div class="recent-label">최근 생성 결과</div>
+  <div class="preview-box" id="previewBox">아직 생성된 번호가 없습니다.</div>
+
+</div>
+
+<!-- 기록 모달 -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeHistoryOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📋 생성 기록</div>
+      <button class="modal-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast">📋 클립보드에 복사되었습니다!</div>
+
+<script>
+// ── 상태 ──────────────────────────────────────────────────
+let mode = 'lotto';
+let isGenerating = false;
+let currentResults = [];
+let history = [];
+
+// 볼 색상 (숫자 범위별)
+function getBallClass(n) {
+  if (n <= 10) return 'r1';
+  if (n <= 20) return 'r2';
+  if (n <= 30) return 'r3';
+  if (n <= 40) return 'r4';
+  return 'r5';
+}
+
+// ── 날짜 ──────────────────────────────────────────────────
+function getDrawDate(dayOfWeek) { // 0=일,6=토
+  const now = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    if (d.getDay() === dayOfWeek) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${y}년 ${m}월 ${dd}일(${days[d.getDay()]}) 번호`;
+    }
+  }
+}
+
+function updateHeader() {
+  document.getElementById('headerDate').textContent =
+    mode === 'lotto' ? getDrawDate(6) : getDrawDate(4);
+}
+
+// ── 초기 UI 만들기 ──────────────────────────────────────
+function buildLottoGrid() {
+  const grid = document.getElementById('lottoGrid');
+  grid.innerHTML = '';
+  for (let g = 0; g < 5; g++) {
+    const row = document.createElement('div');
+    row.className = 'lotto-row';
+    const label = document.createElement('div');
+    label.className = 'game-label';
+    label.textContent = `Game ${g+1}`;
+    row.appendChild(label);
+    for (let b = 0; b < 6; b++) {
+      const ball = document.createElement('div');
+      ball.className = 'ball';
+      ball.id = `ball-${g}-${b}`;
+      row.appendChild(ball);
+    }
+    grid.appendChild(row);
+  }
+}
+
+function buildPensionDigits() {
+  const wrap = document.getElementById('pensionDigits');
+  wrap.innerHTML = '';
+  const posLabels = ['1st','2nd','3rd','4th','5th','6th'];
+  for (let i = 0; i < 6; i++) {
+    const d = document.createElement('div');
+    d.className = 'pension-digit';
+    d.id = `pdigit-${i}`;
+    d.innerHTML = `<span class="digit-pos">${posLabels[i]}</span><span class="digit-val" id="pval-${i}">?</span>`;
+    wrap.appendChild(d);
+  }
+}
+
+// ── 모드 전환 ──────────────────────────────────────────
+function switchMode(m) {
+  if (isGenerating) return;
+  mode = m;
+  const isLotto = m === 'lotto';
+
+  document.getElementById('tabLotto').className = 'tab-btn' + (isLotto ? ' active-lotto' : '');
+  document.getElementById('tabPension').className = 'tab-btn' + (!isLotto ? ' active-pension' : '');
+  document.getElementById('headerTitle').textContent = isLotto ? '🍀 LOTTO' : '💰 PENSION';
+  document.getElementById('headerTitle').className = 'header-title' + (!isLotto ? ' pension-mode' : '');
+  document.getElementById('lottoSection').className = 'lotto-section' + (!isLotto ? ' hidden' : '');
+  document.getElementById('pensionSection').className = 'pension-section' + (!isLotto ? ' visible' : '');
+  document.getElementById('progressBar').className = 'progress-bar' + (!isLotto ? ' pension-bar' : '');
+
+  const genBtn = document.getElementById('genBtn');
+  genBtn.className = 'btn btn-primary' + (!isLotto ? ' pension-mode' : '');
+
+  currentResults = [];
+  document.getElementById('previewBox').textContent = '아직 생성된 번호가 없습니다.';
+  setStatus('버튼을 눌러 번호를 생성하세요', false);
+  clearBalls();
+  updateHeader();
+}
+
+function clearBalls() {
+  if (mode === 'lotto') {
+    for (let g = 0; g < 5; g++)
+      for (let b = 0; b < 6; b++) {
+        const el = document.getElementById(`ball-${g}-${b}`);
+        if (el) { el.className = 'ball'; el.textContent = ''; }
+      }
+  } else {
+    for (let i = 0; i < 6; i++) {
+      const el = document.getElementById(`pdigit-${i}`);
+      if (el) el.className = 'pension-digit';
+      const val = document.getElementById(`pval-${i}`);
+      if (val) val.textContent = '?';
+    }
+  }
+}
+
+// ── 유틸 ──────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setProgress(pct) {
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function setStatus(msg, done=false) {
+  const el = document.getElementById('statusText');
+  el.textContent = msg;
+  el.className = 'status' + (done ? ' done' : '');
+}
+
+// ── 로또 번호 생성 ────────────────────────────────────
+function generateLottoNumbers() {
+  const nums = [];
+  while (nums.length < 6) {
+    const n = Math.floor(Math.random() * 45) + 1;
+    if (!nums.includes(n)) nums.push(n);
+  }
+  return nums.sort((a,b) => a-b);
+}
+
+async function runLotto() {
+  const allNumbers = [];
+  for (let g = 0; g < 5; g++) {
+    setProgress((g / 5) * 90);
+    setStatus(`Game ${g+1} 번호 생성 중...`);
+    const nums = generateLottoNumbers();
+    allNumbers.push(nums);
+    for (let b = 0; b < 6; b++) {
+      await sleep(130);
+      const ball = document.getElementById(`ball-${g}-${b}`);
+      ball.textContent = nums[b];
+      ball.className = `ball revealed ${getBallClass(nums[b])}`;
+    }
+    await sleep(80);
+  }
+  setProgress(100);
+  await sleep(300);
+  setProgress(0);
+  currentResults = allNumbers;
+
+  const dateStr = getDrawDate(6);
+  history.unshift({ mode:'lotto', dateStr, data: allNumbers });
+
+  const lines = allNumbers.map((nums,i) =>
+    `Game ${i+1}: ${nums.map(n => String(n).padStart(2,'0')).join('  ')}`
+  );
+  document.getElementById('previewBox').textContent = lines.join('\n');
+  setStatus('✅ 로또 번호 생성 완료!', true);
+}
+
+// ── 연금복권 번호 생성 ────────────────────────────────
+async function runPension() {
+  const digits = [];
+  for (let i = 0; i < 6; i++) {
+    setProgress(((i+1)/6) * 90);
+    await sleep(280);
+    const d = Math.floor(Math.random() * 10);
+    digits.push(d);
+    const el = document.getElementById(`pdigit-${i}`);
+    el.className = 'pension-digit revealed';
+    document.getElementById(`pval-${i}`).textContent = d;
+  }
+  setProgress(100);
+  await sleep(300);
+  setProgress(0);
+  currentResults = digits;
+
+  const dateStr = getDrawDate(4);
+  history.unshift({ mode:'pension', dateStr, data: digits });
+
+  document.getElementById('previewBox').textContent =
+    `번호: ${digits.join('  ')}`;
+  setStatus('✅ 연금복권 번호 생성 완료!', true);
+}
+
+// ── 생성 시작 ──────────────────────────────────────────
+async function startGenerate() {
+  if (isGenerating) return;
+  isGenerating = true;
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.textContent = '생성 중...';
+  clearBalls();
+  currentResults = [];
+
+  try {
+    if (mode === 'lotto') await runLotto();
+    else await runPension();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '번호 생성';
+    isGenerating = false;
+  }
+}
+
+// ── 복사 ──────────────────────────────────────────────
+async function copyResult() {
+  if (!currentResults.length) {
+    showToast('먼저 번호를 생성해주세요!');
+    return;
+  }
+  let text = '';
+  if (mode === 'lotto') {
+    text = `[로또 6/45] ${getDrawDate(6)}\n\n` +
+      currentResults.map((nums,i) =>
+        `[Game ${i+1}]: ${nums.join(' | ')}`
+      ).join('\n');
+  } else {
+    text = `[연금복권 720+] ${getDrawDate(4)}\n\n번호: ${currentResults.join(' ')}`;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('📋 클립보드에 복사되었습니다!');
+  } catch {
+    showToast('복사 실패 — 브라우저 권한을 확인해주세요');
+  }
+}
+
+// ── 기록 ──────────────────────────────────────────────
+function openHistory() {
+  const body = document.getElementById('modalBody');
+  if (!history.length) {
+    body.innerHTML = '<div class="empty">아직 생성된 기록이 없습니다.</div>';
+  } else {
+    body.innerHTML = history.map(h => {
+      const isLotto = h.mode === 'lotto';
+      const modeLabel = isLotto ? '🍀 로또 6/45' : '💰 연금복권 720+';
+      let numsHtml = '';
+      if (isLotto) {
+        numsHtml = h.data.map((nums,i) =>
+          `Game ${i+1}: ${nums.map(n=>String(n).padStart(2,'0')).join('  ')}`
+        ).join('\n');
+      } else {
+        numsHtml = `번호: ${h.data.join('  ')}`;
+      }
+      return `<div class="history-entry">
+        <div class="history-mode ${isLotto?'':'pension'}">${modeLabel} &nbsp;|&nbsp; ${h.dateStr}</div>
+        <div class="history-nums">${numsHtml}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('modalOverlay').className = 'modal-overlay open';
+}
+
+function closeHistory() {
+  document.getElementById('modalOverlay').className = 'modal-overlay';
+}
+
+function closeHistoryOutside(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeHistory();
+}
+
+// ── 토스트 ──────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show';
+  setTimeout(() => t.className = 'toast', 2200);
+}
+
+// ── 초기화 ──────────────────────────────────────────
+buildLottoGrid();
+buildPensionDigits();
+updateHeader();
+</script>
+</body>
+</html>
