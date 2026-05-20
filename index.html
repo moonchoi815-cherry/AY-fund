@@ -454,8 +454,14 @@
 // ── 상태 ──────────────────────────────────────────────────
 let mode = 'lotto';
 let isGenerating = false;
-let currentResults = [];
 let history = [];
+
+const state = {
+  lotto:   { results: [], ballState: [], previewText: '아직 생성된 번호가 없습니다.', statusMsg: '버튼을 눌러 번호를 생성하세요', statusDone: false },
+  pension: { results: [], digitState: [], previewText: '아직 생성된 번호가 없습니다.', statusMsg: '버튼을 눌러 번호를 생성하세요', statusDone: false }
+};
+
+function cur() { return state[mode]; }
 
 // 볼 색상 (숫자 범위별)
 function getBallClass(n) {
@@ -467,7 +473,7 @@ function getBallClass(n) {
 }
 
 // ── 날짜 ──────────────────────────────────────────────────
-function getDrawDate(dayOfWeek) { // 0=일,6=토
+function getDrawDate(dayOfWeek) {
   const now = new Date();
   const days = ['일','월','화','수','목','금','토'];
   for (let i = 0; i < 7; i++) {
@@ -538,26 +544,44 @@ function switchMode(m) {
   const genBtn = document.getElementById('genBtn');
   genBtn.className = 'btn btn-primary' + (!isLotto ? ' pension-mode' : '');
 
-  currentResults = [];
-  document.getElementById('previewBox').textContent = '아직 생성된 번호가 없습니다.';
-  setStatus('버튼을 눌러 번호를 생성하세요', false);
-  clearBalls();
+  // 저장된 상태 복원
+  document.getElementById('previewBox').textContent = cur().previewText;
+  setStatus(cur().statusMsg, cur().statusDone);
+  restoreBalls();
   updateHeader();
 }
 
-function clearBalls() {
+// ── 볼 상태 복원 ──────────────────────────────────────
+function restoreBalls() {
   if (mode === 'lotto') {
-    for (let g = 0; g < 5; g++)
+    const saved = state.lotto.ballState;
+    for (let g = 0; g < 5; g++) {
       for (let b = 0; b < 6; b++) {
         const el = document.getElementById(`ball-${g}-${b}`);
-        if (el) { el.className = 'ball'; el.textContent = ''; }
+        if (!el) continue;
+        const s = saved[g] && saved[g][b];
+        if (s) {
+          el.className = `ball revealed ${s.cls}`;
+          el.textContent = s.num;
+        } else {
+          el.className = 'ball';
+          el.textContent = '';
+        }
       }
+    }
   } else {
+    const saved = state.pension.digitState;
     for (let i = 0; i < 6; i++) {
       const el = document.getElementById(`pdigit-${i}`);
-      if (el) el.className = 'pension-digit';
       const val = document.getElementById(`pval-${i}`);
-      if (val) val.textContent = '?';
+      if (!el || !val) continue;
+      if (saved[i] !== undefined) {
+        el.className = 'pension-digit revealed';
+        val.textContent = saved[i];
+      } else {
+        el.className = 'pension-digit';
+        val.textContent = '?';
+      }
     }
   }
 }
@@ -587,57 +611,70 @@ function generateLottoNumbers() {
 
 async function runLotto() {
   const allNumbers = [];
+  state.lotto.ballState = [];
   for (let g = 0; g < 5; g++) {
     setProgress((g / 5) * 90);
     setStatus(`Game ${g+1} 번호 생성 중...`);
     const nums = generateLottoNumbers();
     allNumbers.push(nums);
+    state.lotto.ballState[g] = [];
     for (let b = 0; b < 6; b++) {
-      await sleep(130);
+      await sleep(728);
       const ball = document.getElementById(`ball-${g}-${b}`);
+      const cls = getBallClass(nums[b]);
       ball.textContent = nums[b];
-      ball.className = `ball revealed ${getBallClass(nums[b])}`;
+      ball.className = `ball revealed ${cls}`;
+      state.lotto.ballState[g][b] = { num: nums[b], cls };
     }
-    await sleep(80);
+    await sleep(728);
   }
   setProgress(100);
-  await sleep(300);
+  await sleep(728);
   setProgress(0);
-  currentResults = allNumbers;
 
+  state.lotto.results = allNumbers;
   const dateStr = getDrawDate(6);
   history.unshift({ mode:'lotto', dateStr, data: allNumbers });
 
   const lines = allNumbers.map((nums,i) =>
     `Game ${i+1}: ${nums.map(n => String(n).padStart(2,'0')).join('  ')}`
   );
-  document.getElementById('previewBox').textContent = lines.join('\n');
-  setStatus('✅ 로또 번호 생성 완료!', true);
+  const preview = lines.join('\n');
+  document.getElementById('previewBox').textContent = preview;
+  state.lotto.previewText = preview;
+  state.lotto.statusMsg = '✅ 로또 번호 생성 완료!';
+  state.lotto.statusDone = true;
+  setStatus(state.lotto.statusMsg, true);
 }
 
 // ── 연금복권 번호 생성 ────────────────────────────────
 async function runPension() {
   const digits = [];
+  state.pension.digitState = [];
   for (let i = 0; i < 6; i++) {
     setProgress(((i+1)/6) * 90);
-    await sleep(280);
+    await sleep(728);
     const d = Math.floor(Math.random() * 10);
     digits.push(d);
+    state.pension.digitState[i] = d;
     const el = document.getElementById(`pdigit-${i}`);
     el.className = 'pension-digit revealed';
     document.getElementById(`pval-${i}`).textContent = d;
   }
   setProgress(100);
-  await sleep(300);
+  await sleep(728);
   setProgress(0);
-  currentResults = digits;
 
+  state.pension.results = digits;
   const dateStr = getDrawDate(4);
   history.unshift({ mode:'pension', dateStr, data: digits });
 
-  document.getElementById('previewBox').textContent =
-    `번호: ${digits.join('  ')}`;
-  setStatus('✅ 연금복권 번호 생성 완료!', true);
+  const preview = `번호: ${digits.join('  ')}`;
+  document.getElementById('previewBox').textContent = preview;
+  state.pension.previewText = preview;
+  state.pension.statusMsg = '✅ 연금복권 번호 생성 완료!';
+  state.pension.statusDone = true;
+  setStatus(state.pension.statusMsg, true);
 }
 
 // ── 생성 시작 ──────────────────────────────────────────
@@ -647,8 +684,24 @@ async function startGenerate() {
   const btn = document.getElementById('genBtn');
   btn.disabled = true;
   btn.textContent = '생성 중...';
-  clearBalls();
-  currentResults = [];
+
+  // 현재 탭 상태만 초기화
+  if (mode === 'lotto') {
+    state.lotto.ballState = [];
+    for (let g = 0; g < 5; g++)
+      for (let b = 0; b < 6; b++) {
+        const el = document.getElementById(`ball-${g}-${b}`);
+        if (el) { el.className = 'ball'; el.textContent = ''; }
+      }
+  } else {
+    state.pension.digitState = [];
+    for (let i = 0; i < 6; i++) {
+      const el = document.getElementById(`pdigit-${i}`);
+      const val = document.getElementById(`pval-${i}`);
+      if (el) el.className = 'pension-digit';
+      if (val) val.textContent = '?';
+    }
+  }
 
   try {
     if (mode === 'lotto') await runLotto();
@@ -662,18 +715,19 @@ async function startGenerate() {
 
 // ── 복사 ──────────────────────────────────────────────
 async function copyResult() {
-  if (!currentResults.length) {
+  const results = cur().results;
+  if (!results.length) {
     showToast('먼저 번호를 생성해주세요!');
     return;
   }
   let text = '';
   if (mode === 'lotto') {
     text = `[로또 6/45] ${getDrawDate(6)}\n\n` +
-      currentResults.map((nums,i) =>
+      results.map((nums,i) =>
         `[Game ${i+1}]: ${nums.join(' | ')}`
       ).join('\n');
   } else {
-    text = `[연금복권 720+] ${getDrawDate(4)}\n\n번호: ${currentResults.join(' ')}`;
+    text = `[연금복권 720+] ${getDrawDate(4)}\n\n번호: ${results.join(' ')}`;
   }
   try {
     await navigator.clipboard.writeText(text);
@@ -729,6 +783,7 @@ function showToast(msg) {
 buildLottoGrid();
 buildPensionDigits();
 updateHeader();
+
 </script>
 </body>
 </html>
