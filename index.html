@@ -361,6 +361,20 @@
 
     .header-title { font-size: 24px; }
 
+    /* 기존 이미지 숨기기 — 탭 안 가리게 */
+    .header-img { display: none; }
+
+    /* 날짜 자리에 배경 이미지로 대체 */
+    .header-date {
+      width: 70px;
+      height: 70px;
+      background-image: url('assets/images/AY.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center right;
+      font-size: 0;   /* 날짜 텍스트는 숨김 */
+    }
+
     .tab-btn { font-size: 12px; padding: 8px 14px; }
 
     /* 볼 크기 축소 */
