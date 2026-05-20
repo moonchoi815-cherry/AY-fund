@@ -42,6 +42,27 @@
     max-width: 700px;
   }
 
+  /* ── 헤더+탭 래퍼 ── */
+  .header-tab-wrap {
+    position: relative;   /* 이미지의 absolute 기준점 */
+    padding-top: 35px;
+  }
+
+  /* ── 겹치는 이미지 ── */
+  .header-img {
+    position: absolute;
+    /* 가운데 정렬: 왼쪽 50% + 자기 너비 절반만큼 당기기 */
+    left: 51%;
+    transform: translateX(-50%);
+    /* 헤더 아래에서 시작해서 탭 위로 걸침 */
+    bottom: 5px;          /* 탭 위쪽에서 얼마나 겹칠지 — 숫자 조절 가능 */
+    width: 130px;           /* 이미지 너비 — 조절 가능 */
+    height: 160px;          /* 이미지 높이 — 조절 가능 */
+    object-fit: contain;
+    z-index: 10;           /* 탭 버튼 위에 뜨도록 */
+    pointer-events: none;  /* 이미지가 탭 클릭 방해 안 하게 */
+  }
+
   /* ── 헤더 ── */
   .header {
     display: flex;
@@ -61,7 +82,7 @@
     font-size: 12px;
     color: var(--dim);
     padding-bottom: 4px;
-  }
+  }  
 
   /* ── 탭 ── */
   .tabs {
@@ -391,18 +412,25 @@
 <body>
 <div class="app">
 
-  <!-- 헤더 -->
-  <div class="header">
-    <div class="header-title" id="headerTitle">🍀 LOTTO</div>
-    <div class="header-date" id="headerDate"></div>
-  </div>
+  <!-- 헤더 + 탭 묶음 (이미지 겹치기용 기준점) -->
+  <div class="header-tab-wrap">
 
-  <!-- 탭 -->
-  <div class="tabs">
-    <button class="tab-btn active-lotto" id="tabLotto" onclick="switchMode('lotto')">🎱 로또 6/45</button>
-    <button class="tab-btn" id="tabPension" onclick="switchMode('pension')">💰 연금복권 720+</button>
+    <!-- 헤더 -->
+    <div class="header">
+      <div class="header-title" id="headerTitle">🍀 LOTTO</div>
+      <div class="header-date" id="headerDate"></div>
+    </div>
+
+    <!-- 헤더~탭 사이에 겹치는 이미지 -->
+      <img src="assets/images/AY.png" class="header-img" id="headerImg" alt="AY">
+
+    <!-- 탭 -->
+    <div class="tabs">
+      <button class="tab-btn active-lotto" id="tabLotto" onclick="switchMode('lotto')">🎱 로또 6/45</button>
+      <button class="tab-btn" id="tabPension" onclick="switchMode('pension')">💰 연금복권</button>
+    </div>
+    <div class="divider"></div>
   </div>
-  <div class="divider"></div>
 
   <!-- 로또 영역 -->
   <div class="lotto-section" id="lottoSection">
@@ -411,7 +439,7 @@
 
   <!-- 연금복권 영역 -->
   <div class="pension-section" id="pensionSection">
-    <div class="pension-label">연금복권 720+ — 6자리 번호</div>
+    <div class="pension-label">연금복권 — 6자리 번호</div>
     <div class="pension-digits" id="pensionDigits"></div>
   </div>
 
@@ -619,7 +647,7 @@ async function runLotto() {
     allNumbers.push(nums);
     state.lotto.ballState[g] = [];
     for (let b = 0; b < 6; b++) {
-      await sleep(728);
+      await sleep(25);
       const ball = document.getElementById(`ball-${g}-${b}`);
       const cls = getBallClass(nums[b]);
       ball.textContent = nums[b];
@@ -629,7 +657,7 @@ async function runLotto() {
     await sleep(728);
   }
   setProgress(100);
-  await sleep(728);
+  await sleep(7.28);
   setProgress(0);
 
   state.lotto.results = allNumbers;
@@ -727,7 +755,7 @@ async function copyResult() {
         `[Game ${i+1}]: ${nums.join(' | ')}`
       ).join('\n');
   } else {
-    text = `[연금복권 720+] ${getDrawDate(4)}\n\n번호: ${results.join(' ')}`;
+    text = `[연금복권] ${getDrawDate(4)}\n\n번호: ${results.join(' ')}`;
   }
   try {
     await navigator.clipboard.writeText(text);
@@ -745,7 +773,7 @@ function openHistory() {
   } else {
     body.innerHTML = history.map(h => {
       const isLotto = h.mode === 'lotto';
-      const modeLabel = isLotto ? '🍀 로또 6/45' : '💰 연금복권 720+';
+      const modeLabel = isLotto ? '🍀 로또' : '💰 연금복권';
       let numsHtml = '';
       if (isLotto) {
         numsHtml = h.data.map((nums,i) =>
