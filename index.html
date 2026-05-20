@@ -651,37 +651,66 @@ function setStatus(msg, done=false) {
   el.className = 'status' + (done ? ' done' : '');
 }
 
-// ── 로또 번호 생성 ────────────────────────────────────
-function generateLottoNumbers() {
-  const nums = [];
-  while (nums.length < 6) {
-    const n = Math.floor(Math.random() * 45) + 1;
-    if (!nums.includes(n)) nums.push(n);
-  }
-  return nums.sort((a,b) => a-b);
+// ── crypto 난수 유틸 ──────────────────────────────────
+function cryptoRandInt(min, max) {
+  const range = max - min + 1;
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return min + (array[0] % range);
 }
 
+// Promise로 감싸서 await 가능 — 딜레이 포함
+function cryptoRandIntAsync(min, max, delay) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(cryptoRandInt(min, max));
+    }, delay);
+  });
+}
+
+// ── 로또 번호 생성 ────────────────────────────────────
 async function runLotto() {
   const allNumbers = [];
   state.lotto.ballState = [];
   for (let g = 0; g < 5; g++) {
     setProgress((g / 5) * 90);
     setStatus(`Game ${g+1} 번호 생성 중...`);
-    const nums = generateLottoNumbers();
-    allNumbers.push(nums);
+    state.lotto.ballState[g] = [];
+
+    // 번호 하나 뽑을 때마다 딜레이 적용 + 바로 볼에 표시
+    const nums = [];
+    while (nums.length < 6) {
+      const n = await cryptoRandIntAsync(1, 45, 72.8); // ← 딜레이(ms) 조절 가능
+      if (!nums.includes(n)) {
+        nums.push(n);
+        const b = nums.length - 1;
+        const ball = document.getElementById(`ball-${g}-${b}`);
+        const cls = getBallClass(n);
+        ball.textContent = n;
+        ball.className = `ball revealed ${cls}`;
+      }
+    }
+      // 6개 다 뽑힌 후 오름차순 정렬 → 볼 애니메이션과 함께 다시 그리기
+    await sleep(300);
+    nums.sort((a, b) => a - b);
     state.lotto.ballState[g] = [];
     for (let b = 0; b < 6; b++) {
-      await sleep(25);
       const ball = document.getElementById(`ball-${g}-${b}`);
       const cls = getBallClass(nums[b]);
+      // 클래스 초기화 → 리플로우 강제 → 다시 붙여서 popIn 애니메이션 재트리거
+      ball.className = 'ball';
       ball.textContent = nums[b];
+      void ball.offsetWidth; // 리플로우 강제 (이 줄이 없으면 애니메이션 재생 안 됨)
       ball.className = `ball revealed ${cls}`;
       state.lotto.ballState[g][b] = { num: nums[b], cls };
+      await sleep(80); // 볼마다 순서대로 나타나게
     }
-    await sleep(728);
+
+    allNumbers.push(nums);
+    await sleep(428); // 게임 사이 간격
   }
   setProgress(100);
-  await sleep(7.28);
+  await sleep(710);
   setProgress(0);
 
   state.lotto.results = allNumbers;
@@ -705,8 +734,8 @@ async function runPension() {
   state.pension.digitState = [];
   for (let i = 0; i < 6; i++) {
     setProgress(((i+1)/6) * 90);
-    await sleep(728);
-    const d = Math.floor(Math.random() * 10);
+    // 숫자 하나 뽑을 때마다 딜레이 적용
+    const d = await cryptoRandIntAsync(0, 9, 728); // ← 딜레이(ms) 조절 가능
     digits.push(d);
     state.pension.digitState[i] = d;
     const el = document.getElementById(`pdigit-${i}`);
